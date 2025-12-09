@@ -2,7 +2,6 @@ name: Continuous Learning
 
 on:
   schedule:
-    # Run weekly on Sunday at midnight
     - cron: '0 0 * * 0'
   workflow_dispatch:
     inputs:
@@ -30,7 +29,6 @@ jobs:
       - name: Check for new data
         id: check
         run: |
-          # Check if dataset has changed since last training
           LAST_TRAIN=$(git log -1 --format=%H -- mlops/training/)
           LAST_DATA=$(git log -1 --format=%H -- dataset/samples/)
           
@@ -57,30 +55,28 @@ jobs:
           python-version: '3.11'
       
       - name: Install dependencies
-        run: |
-          pip install pyyaml huggingface_hub
+        run: pip install pyyaml huggingface_hub
       
       - name: Download previous model
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python -c "
-from huggingface_hub import hf_hub_download, login
-import os
+          python << 'EOF'
+          from huggingface_hub import hf_hub_download, login
+          import os
 
-login(token=os.environ.get('HF_TOKEN'))
+          login(token=os.environ.get('HF_TOKEN'))
 
-try:
-    # Try to download previous metrics for comparison
-    hf_hub_download(
-        repo_id='shk-bd/Sheikh-Freemium',
-        filename='training_outputs/metrics.yaml',
-        local_dir='previous'
-    )
-    print('Downloaded previous metrics')
-except:
-    print('No previous metrics found (first run)')
-"
+          try:
+              hf_hub_download(
+                  repo_id='shk-bd/Sheikh-Freemium',
+                  filename='training_outputs/metrics.yaml',
+                  local_dir='previous'
+              )
+              print('Downloaded previous metrics')
+          except Exception as e:
+              print(f'No previous metrics found: {e}')
+          EOF
       
       - name: Run incremental training
         env:
@@ -88,8 +84,6 @@ except:
         run: |
           MODE="${{ github.event.inputs.learning_mode || 'incremental' }}"
           echo "Training mode: $MODE"
-          
-          # Run training (dry-run for CI)
           python mlops/training/train.py --config mlops/training/config.yaml --dry-run
       
       - name: Validate and compare
@@ -105,8 +99,6 @@ except:
           fi
       
       - name: Update model version
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           echo "Continuous learning iteration complete"
           echo "Next iteration scheduled for next week"

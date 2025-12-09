@@ -52,52 +52,47 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python -c "
-from huggingface_hub import login, upload_folder, HfApi
-import os
+          python << 'EOF'
+          from huggingface_hub import login, upload_folder, HfApi
+          import os
 
-login(token=os.environ['HF_TOKEN'])
-api = HfApi()
+          login(token=os.environ['HF_TOKEN'])
+          api = HfApi()
 
-# Ensure repo exists
-api.create_repo('shk-bd/Sheikh-Freemium', repo_type='model', exist_ok=True)
+          api.create_repo('shk-bd/Sheikh-Freemium', repo_type='model', exist_ok=True)
 
-# Upload model card
-upload_folder(
-    folder_path='.',
-    repo_id='shk-bd/Sheikh-Freemium',
-    repo_type='model',
-    ignore_patterns=['*.git*', 'node_modules', '__pycache__', '.env']
-)
-print('Model released to HuggingFace')
-"
+          upload_folder(
+              folder_path='.',
+              repo_id='shk-bd/Sheikh-Freemium',
+              repo_type='model',
+              ignore_patterns=['*.git*', 'node_modules', '__pycache__', '.env']
+          )
+          print('Model released to HuggingFace')
+          EOF
       
       - name: Push to HuggingFace (Dataset)
         if: contains(fromJSON('["dataset", "both"]'), github.event.inputs.release_type)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python -c "
-from huggingface_hub import login, upload_folder, HfApi
-import os
+          python << 'EOF'
+          from huggingface_hub import login, upload_folder, HfApi
+          import os
 
-login(token=os.environ['HF_TOKEN'])
-api = HfApi()
+          login(token=os.environ['HF_TOKEN'])
+          api = HfApi()
 
-# Ensure repo exists
-api.create_repo('shk-bd/Sheikh-Freemium', repo_type='dataset', exist_ok=True)
+          api.create_repo('shk-bd/Sheikh-Freemium', repo_type='dataset', exist_ok=True)
 
-# Upload dataset
-upload_folder(
-    folder_path='dataset',
-    repo_id='shk-bd/Sheikh-Freemium',
-    repo_type='dataset'
-)
-print('Dataset released to HuggingFace')
-"
+          upload_folder(
+              folder_path='dataset',
+              repo_id='shk-bd/Sheikh-Freemium',
+              repo_type='dataset'
+          )
+          print('Dataset released to HuggingFace')
+          EOF
       
       - name: Generate changelog
-        id: changelog
         run: |
           echo "## Changes in ${{ github.event.inputs.version }}" > CHANGELOG.md
           echo "" >> CHANGELOG.md

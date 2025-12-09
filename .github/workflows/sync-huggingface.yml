@@ -45,11 +45,22 @@ jobs:
 
       - name: Login to Hugging Face
         run: |
-          python -c "from huggingface_hub import login; login(token='${{ secrets.HF_TOKEN }}')"
+          python << 'EOF'
+          from huggingface_hub import login
+          import os
+          login(token=os.environ['HF_TOKEN'])
+          print('Logged in to HuggingFace')
+          EOF
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
       - name: Validate HF connection
         run: |
-          python -c "from huggingface_hub import HfApi; api = HfApi(); print('Connected as:', api.whoami()['name'])"
+          python << 'EOF'
+          from huggingface_hub import HfApi
+          api = HfApi()
+          print('Connected as:', api.whoami()['name'])
+          EOF
 
       - name: Upload to Hugging Face
         run: |

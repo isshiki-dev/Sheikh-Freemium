@@ -28,11 +28,15 @@ jobs:
 
       - name: Login and upload Space
         run: |
-          python -c "from huggingface_hub import login; login(token='${{ secrets.HF_TOKEN }}')"
-          python -c "
-from huggingface_hub import upload_folder, HfApi
-api = HfApi()
-api.create_repo('shk-bd/Sheikh-Freemium', repo_type='space', space_sdk='docker', exist_ok=True)
-upload_folder(folder_path='space', repo_id='shk-bd/Sheikh-Freemium', repo_type='space')
-print('Space uploaded: https://huggingface.co/spaces/shk-bd/Sheikh-Freemium')
-"
+          python << 'EOF'
+          from huggingface_hub import upload_folder, HfApi, login
+          import os
+
+          login(token=os.environ['HF_TOKEN'])
+          api = HfApi()
+          api.create_repo('shk-bd/Sheikh-Freemium', repo_type='space', space_sdk='docker', exist_ok=True)
+          upload_folder(folder_path='space', repo_id='shk-bd/Sheikh-Freemium', repo_type='space')
+          print('Space uploaded: https://huggingface.co/spaces/shk-bd/Sheikh-Freemium')
+          EOF
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}

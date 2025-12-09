@@ -1,0 +1,86 @@
+name: Validate Changes
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - 'dataset/**'
+      - 'prompts/**'
+      - 'mlops/**'
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install linters
+        run: pip install flake8 black isort
+      
+      - name: Lint Python
+        run: |
+          flake8 mlops/ --max-line-length=120 --ignore=E501,W503
+          flake8 dataset/scripts/ --max-line-length=120 --ignore=E501,W503
+
+  validate-dataset:
+    name: Validate Dataset
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install jsonschema
+      
+      - name: Validate samples
+        run: python dataset/scripts/validate.py --input dataset/samples/
+
+  validate-config:
+    name: Validate Configs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install pyyaml
+      
+      - name: Validate YAML configs
+        run: |
+          python -c "import yaml; yaml.safe_load(open('mlops/pipeline.yaml'))"
+          python -c "import yaml; yaml.safe_load(open('mlops/training/config.yaml'))"
+          python -c "import yaml; yaml.safe_load(open('dataset/config.yaml'))"
+          echo "All configs valid"
+
+  test-training-script:
+    name: Test Training Script
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install pyyaml
+      
+      - name: Dry run training
+        run: python mlops/training/train.py --config mlops/training/config.yaml --dry-run

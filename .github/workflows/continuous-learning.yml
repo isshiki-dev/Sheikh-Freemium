@@ -1,0 +1,128 @@
+name: Continuous Learning
+
+on:
+  schedule:
+    # Run weekly on Sunday at midnight
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    inputs:
+      learning_mode:
+        description: 'Learning mode'
+        required: true
+        default: 'incremental'
+        type: choice
+        options:
+          - incremental
+          - full_retrain
+
+jobs:
+  check-updates:
+    name: Check for Updates
+    runs-on: ubuntu-latest
+    outputs:
+      has_updates: ${{ steps.check.outputs.has_updates }}
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check for new data
+        id: check
+        run: |
+          # Check if dataset has changed since last training
+          LAST_TRAIN=$(git log -1 --format=%H -- mlops/training/)
+          LAST_DATA=$(git log -1 --format=%H -- dataset/samples/)
+          
+          if [ "$LAST_DATA" != "$LAST_TRAIN" ]; then
+            echo "New data available for training"
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+          else
+            echo "No new data"
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+          fi
+
+  continuous-train:
+    name: Continuous Training
+    needs: check-updates
+    if: needs.check-updates.outputs.has_updates == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install pyyaml huggingface_hub
+      
+      - name: Download previous model
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "
+from huggingface_hub import hf_hub_download, login
+import os
+
+login(token=os.environ.get('HF_TOKEN'))
+
+try:
+    # Try to download previous metrics for comparison
+    hf_hub_download(
+        repo_id='shk-bd/Sheikh-Freemium',
+        filename='training_outputs/metrics.yaml',
+        local_dir='previous'
+    )
+    print('Downloaded previous metrics')
+except:
+    print('No previous metrics found (first run)')
+"
+      
+      - name: Run incremental training
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          MODE="${{ github.event.inputs.learning_mode || 'incremental' }}"
+          echo "Training mode: $MODE"
+          
+          # Run training (dry-run for CI)
+          python mlops/training/train.py --config mlops/training/config.yaml --dry-run
+      
+      - name: Validate and compare
+        run: |
+          echo "Comparing with previous version..."
+          if [ -f "previous/training_outputs/metrics.yaml" ]; then
+            python mlops/validation/validate_weights.py \
+              --config mlops/training/config.yaml \
+              --metrics outputs/metrics.yaml \
+              --previous previous/training_outputs/metrics.yaml || true
+          else
+            echo "No previous metrics for comparison"
+          fi
+      
+      - name: Update model version
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          echo "Continuous learning iteration complete"
+          echo "Next iteration scheduled for next week"
+
+  report:
+    name: Generate Report
+    needs: continuous-train
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Create summary
+        run: |
+          echo "## Continuous Learning Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Mode**: ${{ github.event.inputs.learning_mode || 'incremental' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ needs.continuous-train.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run**: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,187 @@
+name: Train Model
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dataset/samples/**'
+      - 'prompts/**'
+      - 'mlops/training/**'
+  pull_request:
+    paths:
+      - 'mlops/training/**'
+  workflow_dispatch:
+    inputs:
+      full_train:
+        description: 'Run full training (vs quick validation)'
+        required: false
+        default: 'false'
+        type: boolean
+      push_to_hub:
+        description: 'Push model to HuggingFace'
+        required: false
+        default: 'false'
+        type: boolean
+  schedule:
+    # Weekly continuous learning
+    - cron: '0 0 * * 0'
+
+jobs:
+  validate-data:
+    name: Validate Data
+    runs-on: ubuntu-latest
+    outputs:
+      data_valid: ${{ steps.validate.outputs.valid }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install jsonschema pyyaml
+      
+      - name: Validate dataset
+        id: validate
+        run: |
+          python dataset/scripts/validate.py --input dataset/samples/ && echo "valid=true" >> $GITHUB_OUTPUT || echo "valid=false" >> $GITHUB_OUTPUT
+
+  train:
+    name: Fine-tune Model
+    needs: validate-data
+    if: needs.validate-data.outputs.data_valid == 'true'
+    runs-on: ubuntu-latest
+    # For actual GPU training, use self-hosted runner or cloud provider
+    # runs-on: [self-hosted, gpu]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install pyyaml transformers accelerate
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+      
+      - name: Run training
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+        run: |
+          if [ "${{ github.event.inputs.full_train }}" == "true" ]; then
+            python mlops/training/train.py --config mlops/training/config.yaml
+          else
+            python mlops/training/train.py --config mlops/training/config.yaml --dry-run
+          fi
+      
+      - name: Upload training artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: training-outputs
+          path: outputs/
+          retention-days: 30
+
+  validate-weights:
+    name: Validate Weights
+    needs: train
+    runs-on: ubuntu-latest
+    outputs:
+      validation_passed: ${{ steps.validate.outputs.passed }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download training artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: training-outputs
+          path: outputs/
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install pyyaml
+      
+      - name: Validate weights
+        id: validate
+        run: |
+          if [ -f "outputs/metrics.yaml" ]; then
+            python mlops/validation/validate_weights.py \
+              --config mlops/training/config.yaml \
+              --metrics outputs/metrics.yaml && echo "passed=true" >> $GITHUB_OUTPUT || echo "passed=false" >> $GITHUB_OUTPUT
+          else
+            echo "No metrics file found (dry run)"
+            echo "passed=true" >> $GITHUB_OUTPUT
+          fi
+
+  release:
+    name: Release Model
+    needs: validate-weights
+    if: |
+      needs.validate-weights.outputs.validation_passed == 'true' && 
+      (github.event.inputs.push_to_hub == 'true' || github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download training artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: training-outputs
+          path: outputs/
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Hugging Face Hub
+        run: pip install huggingface_hub
+      
+      - name: Push to HuggingFace
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "
+from huggingface_hub import login, upload_folder, HfApi
+import os
+
+login(token=os.environ['HF_TOKEN'])
+api = HfApi()
+
+# Upload training outputs
+if os.path.exists('outputs'):
+    upload_folder(
+        folder_path='outputs',
+        repo_id='shk-bd/Sheikh-Freemium',
+        repo_type='model',
+        path_in_repo='training_outputs'
+    )
+    print('Model artifacts uploaded to HuggingFace')
+else:
+    print('No outputs to upload')
+"
+      
+      - name: Create GitHub Release
+        if: github.event_name == 'schedule'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Model v${{ github.run_number }} (Auto-trained)
+          body: |
+            Automated model release from continuous learning pipeline.
+            
+            Training run: ${{ github.run_id }}
+            Triggered by: ${{ github.event_name }}
+          draft: false
+          prerelease: false

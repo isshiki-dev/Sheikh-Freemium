@@ -1,0 +1,115 @@
+name: Release Model
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        type: string
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'model'
+        type: choice
+        options:
+          - model
+          - dataset
+          - both
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install huggingface_hub
+      
+      - name: Validate version format
+        run: |
+          if [[ ! "${{ github.event.inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Version must be in format vX.Y.Z"
+            exit 1
+          fi
+      
+      - name: Push to HuggingFace (Model)
+        if: contains(fromJSON('["model", "both"]'), github.event.inputs.release_type)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "
+from huggingface_hub import login, upload_folder, HfApi
+import os
+
+login(token=os.environ['HF_TOKEN'])
+api = HfApi()
+
+# Ensure repo exists
+api.create_repo('shk-bd/Sheikh-Freemium', repo_type='model', exist_ok=True)
+
+# Upload model card
+upload_folder(
+    folder_path='.',
+    repo_id='shk-bd/Sheikh-Freemium',
+    repo_type='model',
+    ignore_patterns=['*.git*', 'node_modules', '__pycache__', '.env']
+)
+print('Model released to HuggingFace')
+"
+      
+      - name: Push to HuggingFace (Dataset)
+        if: contains(fromJSON('["dataset", "both"]'), github.event.inputs.release_type)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "
+from huggingface_hub import login, upload_folder, HfApi
+import os
+
+login(token=os.environ['HF_TOKEN'])
+api = HfApi()
+
+# Ensure repo exists
+api.create_repo('shk-bd/Sheikh-Freemium', repo_type='dataset', exist_ok=True)
+
+# Upload dataset
+upload_folder(
+    folder_path='dataset',
+    repo_id='shk-bd/Sheikh-Freemium',
+    repo_type='dataset'
+)
+print('Dataset released to HuggingFace')
+"
+      
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "## Changes in ${{ github.event.inputs.version }}" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          git log --oneline -20 >> CHANGELOG.md
+          cat CHANGELOG.md
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: ${{ github.event.inputs.version }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease }}
+          generate_release_notes: true

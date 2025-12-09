@@ -1,0 +1,38 @@
+name: Sync to HuggingFace Space
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'space/**'
+  workflow_dispatch:
+
+jobs:
+  sync-space:
+    runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Hugging Face Hub
+        run: pip install huggingface_hub
+
+      - name: Login and upload Space
+        run: |
+          python -c "from huggingface_hub import login; login(token='${{ secrets.HF_TOKEN }}')"
+          python -c "
+from huggingface_hub import upload_folder, HfApi
+api = HfApi()
+api.create_repo('shk-bd/Sheikh-Freemium', repo_type='space', space_sdk='docker', exist_ok=True)
+upload_folder(folder_path='space', repo_id='shk-bd/Sheikh-Freemium', repo_type='space')
+print('Space uploaded: https://huggingface.co/spaces/shk-bd/Sheikh-Freemium')
+"

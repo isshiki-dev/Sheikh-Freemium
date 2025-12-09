@@ -1,0 +1,47 @@
+# Zebra-CoT Dataset Configuration
+
+dataset:
+  name: zebra-cot
+  version: "1.0.0"
+  description: "Visual Chain of Thought reasoning dataset"
+
+categories:
+  scientific:
+    subcategories:
+      - geometry
+      - physics
+      - algorithms
+    description: "Scientific questions requiring visual reasoning"
+  
+  visual_2d:
+    subcategories:
+      - visual_search
+      - jigsaw_puzzles
+    description: "2D visual reasoning tasks"
+  
+  visual_3d:
+    subcategories:
+      - multi_hop_inference
+      - embodied_planning
+      - robot_planning
+    description: "3D reasoning and embodied AI tasks"
+  
+  logic_games:
+    subcategories:
+      - chess
+      - visual_logic
+      - strategic_games
+    description: "Visual logic problems and strategic games"
+
+reasoning:
+  max_steps: 20
+  step_types:
+    - text
+    - image
+    - interleaved
+  require_logical_coherence: true
+
+validation:
+  schema_path: "schemas/sample_schema.json"
+  strict_mode: true
+  check_image_paths: true

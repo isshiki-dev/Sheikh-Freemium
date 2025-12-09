@@ -1,0 +1,40 @@
+{
+  "id": "geo_triangle_001",
+  "category": "scientific",
+  "subcategory": "geometry",
+  "question": "In triangle ABC, angle A = 60°, angle B = 45°. If side AB = 10 units, find the length of side BC.",
+  "input_images": [],
+  "reasoning_steps": [
+    {
+      "step": 1,
+      "type": "text",
+      "content": "First, find angle C using the triangle angle sum property: C = 180° - 60° - 45° = 75°",
+      "intermediate_result": "angle C = 75°"
+    },
+    {
+      "step": 2,
+      "type": "interleaved",
+      "content": "Draw the triangle with labeled angles and the known side AB.",
+      "image_path": "images/geo_triangle_001_step2.png",
+      "intermediate_result": "Visual representation created"
+    },
+    {
+      "step": 3,
+      "type": "text",
+      "content": "Apply the Law of Sines: BC/sin(A) = AB/sin(C). Therefore BC = AB × sin(A)/sin(C) = 10 × sin(60°)/sin(75°)",
+      "intermediate_result": "BC = 10 × 0.866/0.966"
+    },
+    {
+      "step": 4,
+      "type": "text",
+      "content": "Calculate: BC = 10 × 0.866/0.966 ≈ 8.97 units",
+      "intermediate_result": "BC ≈ 8.97 units"
+    }
+  ],
+  "answer": "BC ≈ 8.97 units",
+  "metadata": {
+    "difficulty": "medium",
+    "source": "synthetic",
+    "tags": ["law-of-sines", "triangle", "trigonometry"]
+  }
+}

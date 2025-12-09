@@ -1,0 +1,40 @@
+{
+  "id": "chess_mate_001",
+  "category": "logic_games",
+  "subcategory": "chess",
+  "question": "White to move. Find the checkmate in 2 moves. Position: White Kh1, Qd1, Rf1; Black Kg8, Rf8, pawns g7, h7.",
+  "input_images": [
+    {
+      "path": "images/chess_mate_001_input.png",
+      "description": "Initial chess position"
+    }
+  ],
+  "reasoning_steps": [
+    {
+      "step": 1,
+      "type": "interleaved",
+      "content": "Analyze the position: Black king is on g8, restricted by pawns on g7 and h7. The back rank is weak with only Rf8 defending.",
+      "image_path": "images/chess_mate_001_step1.png",
+      "intermediate_result": "Back rank weakness identified"
+    },
+    {
+      "step": 2,
+      "type": "text",
+      "content": "Consider Qd8: This attacks the rook and threatens back rank mate. Black must respond to the threat.",
+      "intermediate_result": "Candidate move: Qd8"
+    },
+    {
+      "step": 3,
+      "type": "interleaved",
+      "content": "After 1.Qd8 Rxd8, White plays 2.Rxf8#. The rook delivers checkmate on the back rank.",
+      "image_path": "images/chess_mate_001_step3.png",
+      "intermediate_result": "Checkmate confirmed"
+    }
+  ],
+  "answer": "1.Qd8+ Rxd8 2.Rxf8# (Back rank mate)",
+  "metadata": {
+    "difficulty": "easy",
+    "source": "synthetic",
+    "tags": ["back-rank-mate", "queen-sacrifice", "mate-in-2"]
+  }
+}

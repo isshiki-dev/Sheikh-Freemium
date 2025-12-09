@@ -23,7 +23,6 @@ on:
         default: 'false'
         type: boolean
   schedule:
-    # Weekly continuous learning
     - cron: '0 0 * * 0'
 
 jobs:
@@ -53,8 +52,6 @@ jobs:
     needs: validate-data
     if: needs.validate-data.outputs.data_valid == 'true'
     runs-on: ubuntu-latest
-    # For actual GPU training, use self-hosted runner or cloud provider
-    # runs-on: [self-hosted, gpu]
     
     steps:
       - uses: actions/checkout@v4
@@ -126,9 +123,7 @@ jobs:
   release:
     name: Release Model
     needs: validate-weights
-    if: |
-      needs.validate-weights.outputs.validation_passed == 'true' && 
-      (github.event.inputs.push_to_hub == 'true' || github.event_name == 'schedule')
+    if: needs.validate-weights.outputs.validation_passed == 'true' && (github.event.inputs.push_to_hub == 'true' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     
     steps:
@@ -152,25 +147,24 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python -c "
-from huggingface_hub import login, upload_folder, HfApi
-import os
+          python << 'EOF'
+          from huggingface_hub import login, upload_folder, HfApi
+          import os
 
-login(token=os.environ['HF_TOKEN'])
-api = HfApi()
+          login(token=os.environ['HF_TOKEN'])
+          api = HfApi()
 
-# Upload training outputs
-if os.path.exists('outputs'):
-    upload_folder(
-        folder_path='outputs',
-        repo_id='shk-bd/Sheikh-Freemium',
-        repo_type='model',
-        path_in_repo='training_outputs'
-    )
-    print('Model artifacts uploaded to HuggingFace')
-else:
-    print('No outputs to upload')
-"
+          if os.path.exists('outputs'):
+              upload_folder(
+                  folder_path='outputs',
+                  repo_id='shk-bd/Sheikh-Freemium',
+                  repo_type='model',
+                  path_in_repo='training_outputs'
+              )
+              print('Model artifacts uploaded to HuggingFace')
+          else:
+              print('No outputs to upload')
+          EOF
       
       - name: Create GitHub Release
         if: github.event_name == 'schedule'

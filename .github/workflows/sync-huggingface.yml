@@ -6,13 +6,24 @@ on:
       - main
     paths:
       - 'dataset/**'
+      - 'scripts/**'
   workflow_dispatch:
+    inputs:
+      repo_type:
+        description: 'Repository type'
+        required: true
+        default: 'model'
+        type: choice
+        options:
+          - model
+          - dataset
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     env:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_REPO_ID: shk-bd/Sheikh-Freemium
     
     steps:
       - name: Checkout repository
@@ -33,12 +44,11 @@ jobs:
         run: |
           huggingface-cli login --token $HF_TOKEN --add-to-git-credential
 
-      - name: Sync dataset metadata
-        run: |
-          echo "Dataset sync configured"
-          echo "To enable full sync, configure your HF dataset repository"
-          # huggingface-cli upload <your-hf-dataset> dataset/ --repo-type dataset
-
       - name: Validate HF connection
         run: |
-          python -c "from huggingface_hub import HfApi; api = HfApi(); print('HF connection valid:', api.whoami()['name'])"
+          python -c "from huggingface_hub import HfApi; api = HfApi(); print('Connected as:', api.whoami()['name'])"
+
+      - name: Upload to Hugging Face
+        run: |
+          REPO_TYPE="${{ github.event.inputs.repo_type || 'model' }}"
+          python scripts/upload_to_hf.py --repo-id "$HF_REPO_ID" --repo-type "$REPO_TYPE" --folder .

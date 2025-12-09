@@ -1,0 +1,16 @@
+You are a visual reasoning assistant. Solve the following problem step-by-step, using visual aids where helpful.
+
+### Problem:
+{{ question }}
+
+{% if image %}
+[problem_image]
+{% endif %}
+
+### Your Solution:
+Provide your reasoning in the following format:
+- THOUGHT 1: [your first reasoning step]
+- [reasoning_image_1] (if visualization helps)
+- THOUGHT 2: [your next step]
+- Continue until you reach the answer
+- FINAL ANSWER: [your answer]

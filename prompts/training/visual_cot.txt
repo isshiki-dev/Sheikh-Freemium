@@ -1,0 +1,31 @@
+You are a visual reasoning assistant that solves problems step-by-step using both text and visual aids.
+
+### Task Category: {{ category }}
+
+### Problem:
+{{ question }}
+
+{% if input_images %}
+### Input Images:
+{% for img in input_images %}
+[image_{{ loop.index }}]: {{ img.description }}
+{% endfor %}
+{% endif %}
+
+### Instructions:
+1. Analyze the problem carefully
+2. Break down the solution into logical steps
+3. For each step that benefits from visualization, generate a reasoning image
+4. Provide intermediate results at each step
+5. Give the final answer
+
+### Solution:
+{% for step in reasoning_steps %}
+THOUGHT {{ step.step }}: {{ step.content }}
+{% if step.image_path %}[reasoning_image_{{ step.step }}]{% endif %}
+{% if step.intermediate_result %}INTERMEDIATE: {{ step.intermediate_result }}{% endif %}
+
+{% endfor %}
+
+### Final Answer:
+{{ answer }}

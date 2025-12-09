@@ -1,0 +1,79 @@
+# Training Configuration
+# Visual CoT Fine-tuning
+
+model:
+  base: "multimodal-reasoning-lab/Anole-Zebra-CoT"
+  architecture: "MoT"  # Mixture-of-Transformer-Experts
+  
+data:
+  train_path: "dataset/samples/"
+  validation_split: 0.1
+  max_samples: null  # Use all
+  categories:
+    - scientific
+    - visual_2d
+    - visual_3d
+    - logic_games
+
+training:
+  # Hyperparameters
+  learning_rate: 2e-5
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  
+  # Batch settings
+  per_device_train_batch_size: 8
+  per_device_eval_batch_size: 8
+  gradient_accumulation_steps: 4
+  
+  # Training duration
+  num_train_epochs: 3
+  max_steps: -1  # Use epochs
+  
+  # Optimization
+  optim: "adamw_torch"
+  lr_scheduler_type: "cosine"
+  
+  # Precision
+  fp16: true
+  bf16: false
+  
+  # Checkpointing
+  save_strategy: "steps"
+  save_steps: 500
+  save_total_limit: 3
+  
+  # Evaluation
+  evaluation_strategy: "steps"
+  eval_steps: 500
+  
+  # Logging
+  logging_steps: 100
+  report_to: ["tensorboard", "wandb"]
+
+interleaved:
+  # Visual CoT specific settings
+  max_reasoning_steps: 20
+  image_generation:
+    enabled: true
+    resolution: 512
+  token_prediction:
+    paradigm: "NGTP"  # Next Group of Token Prediction
+    group_size: 4
+
+validation:
+  metrics:
+    - accuracy
+    - reasoning_coherence
+    - visual_quality
+  benchmarks:
+    - name: "visual_cot_test"
+      threshold: 0.15
+    - name: "scientific_reasoning"
+      threshold: 0.12
+
+output:
+  dir: "outputs/"
+  model_name: "sheikh-freemium-finetuned"
+  push_to_hub: true
+  hub_repo: "shk-bd/Sheikh-Freemium"

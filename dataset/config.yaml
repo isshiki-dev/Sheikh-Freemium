@@ -4,9 +4,15 @@ dataset:
   name: zebra-cot
   version: "1.0.0"
   description: "Visual Chain of Thought reasoning dataset"
+  source: "https://huggingface.co/datasets/multimodal-reasoning-lab/Zebra-CoT"
+  license: "CC BY-NC 4.0"
+  total_samples: 182384
+  download_size_gb: 58.9
 
 categories:
   scientific:
+    sample_count: 24021
+    percentage: 13.2
     subcategories:
       - geometry
       - physics
@@ -14,12 +20,16 @@ categories:
     description: "Scientific questions requiring visual reasoning"
   
   visual_2d:
+    sample_count: 51899
+    percentage: 28.5
     subcategories:
       - visual_search
       - jigsaw_puzzles
     description: "2D visual reasoning tasks"
   
   visual_3d:
+    sample_count: 39610
+    percentage: 21.7
     subcategories:
       - multi_hop_inference
       - embodied_planning
@@ -27,11 +37,32 @@ categories:
     description: "3D reasoning and embodied AI tasks"
   
   logic_games:
+    sample_count: 66854
+    percentage: 36.7
     subcategories:
       - chess
       - visual_logic
       - strategic_games
     description: "Visual logic problems and strategic games"
+
+architecture:
+  name: "Mixture-of-Transformer-Experts (MoT)"
+  encoders:
+    - type: pixel_level
+      description: "Captures fine visual details (edges, textures)"
+    - type: semantic_level  
+      description: "Captures high-level concepts and relationships"
+  paradigm: "Next Group of Token Prediction (NGTP)"
+  token_types:
+    - language
+    - visual
+
+performance:
+  in_distribution:
+    baseline_accuracy: 4.2
+    finetuned_accuracy: 16.9
+    absolute_gain: 12.7
+  benchmark_improvement_max: 13.0
 
 reasoning:
   max_steps: 20
@@ -40,6 +71,14 @@ reasoning:
     - image
     - interleaved
   require_logical_coherence: true
+
+models:
+  - name: Anole-Zebra-CoT
+    base: Anole-7B
+    url: "https://huggingface.co/multimodal-reasoning-lab/Anole-Zebra-CoT"
+  - name: Bagel-Zebra-CoT
+    base: Bagel-7B
+    url: "https://huggingface.co/multimodal-reasoning-lab/Bagel-Zebra-CoT"
 
 validation:
   schema_path: "schemas/sample_schema.json"

@@ -38,11 +38,12 @@ jobs:
 
       - name: Install Hugging Face Hub
         run: |
-          pip install huggingface_hub
+          pip install --upgrade pip
+          pip install huggingface_hub[cli]
 
       - name: Login to Hugging Face
         run: |
-          huggingface-cli login --token $HF_TOKEN --add-to-git-credential
+          python -c "from huggingface_hub import login; login(token='${{ secrets.HF_TOKEN }}')"
 
       - name: Validate HF connection
         run: |

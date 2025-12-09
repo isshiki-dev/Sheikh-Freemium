@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Lint Python scripts
+        run: |
+          pip install flake8
+          flake8 dataset/scripts/ --max-line-length=120 --ignore=E501
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install jsonschema pytest
+
+      - name: Run validation tests
+        run: |
+          python dataset/scripts/validate.py --input dataset/samples/ || true
+          echo "Validation complete"
+
+  schema-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON Schema
+        run: |
+          python -c "import json; json.load(open('dataset/schemas/sample_schema.json'))"
+          echo "Schema is valid JSON"

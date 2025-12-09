@@ -1,0 +1,44 @@
+name: Sync to Hugging Face
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dataset/**'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Hugging Face Hub
+        run: |
+          pip install huggingface_hub
+
+      - name: Login to Hugging Face
+        run: |
+          huggingface-cli login --token $HF_TOKEN --add-to-git-credential
+
+      - name: Sync dataset metadata
+        run: |
+          echo "Dataset sync configured"
+          echo "To enable full sync, configure your HF dataset repository"
+          # huggingface-cli upload <your-hf-dataset> dataset/ --repo-type dataset
+
+      - name: Validate HF connection
+        run: |
+          python -c "from huggingface_hub import HfApi; api = HfApi(); print('HF connection valid:', api.whoami()['name'])"

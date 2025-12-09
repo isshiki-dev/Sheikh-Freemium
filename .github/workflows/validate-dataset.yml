@@ -1,0 +1,36 @@
+name: Validate Dataset
+
+on:
+  push:
+    paths:
+      - 'dataset/samples/**'
+      - 'dataset/schemas/**'
+  pull_request:
+    paths:
+      - 'dataset/samples/**'
+      - 'dataset/schemas/**'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install jsonschema
+
+      - name: Validate dataset samples
+        run: |
+          python dataset/scripts/validate.py --input dataset/samples/ --strict
+
+      - name: Check JSON formatting
+        run: |
+          find dataset/samples -name '*.json' -exec python -m json.tool {} \; > /dev/null

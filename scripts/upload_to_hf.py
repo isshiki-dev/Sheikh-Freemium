@@ -16,8 +16,8 @@ def main():
     parser.add_argument(
         "--repo-type",
         choices=["model", "dataset", "space"],
-        default="model",
-        help="Repository type (default: model)"
+        default="dataset",
+        help="Repository type (default: dataset)"
     )
     parser.add_argument(
         "--folder",
@@ -44,16 +44,43 @@ def main():
     user = api.whoami()
     print(f"Logged in as: {user['name']}")
 
+    # Create repo if it doesn't exist
+    try:
+        api.create_repo(
+            repo_id=args.repo_id,
+            repo_type=args.repo_type,
+            exist_ok=True
+        )
+        print(f"Repository {args.repo_id} ready")
+    except Exception as e:
+        print(f"Note: {e}")
+
     # Upload
     print(f"Uploading {args.folder} to {args.repo_id} ({args.repo_type})...")
     upload_folder(
         folder_path=args.folder,
         repo_id=args.repo_id,
         repo_type=args.repo_type,
-        ignore_patterns=["*.git*", "__pycache__", "*.pyc", ".env"]
+        ignore_patterns=[
+            "*.git*", 
+            "__pycache__", 
+            "*.pyc", 
+            ".env",
+            "node_modules",
+            ".DS_Store"
+        ]
     )
+    
+    # Print URL based on repo type
+    if args.repo_type == "dataset":
+        url = f"https://huggingface.co/datasets/{args.repo_id}"
+    elif args.repo_type == "space":
+        url = f"https://huggingface.co/spaces/{args.repo_id}"
+    else:
+        url = f"https://huggingface.co/{args.repo_id}"
+    
     print("Upload complete!")
-    print(f"View at: https://huggingface.co/{args.repo_id}")
+    print(f"View at: {url}")
 
 
 if __name__ == "__main__":

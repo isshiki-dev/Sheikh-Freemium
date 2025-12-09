@@ -7,16 +7,18 @@ on:
     paths:
       - 'dataset/**'
       - 'scripts/**'
+      - 'DATASET_CARD.md'
+      - 'MODEL_CARD.md'
   workflow_dispatch:
     inputs:
       repo_type:
         description: 'Repository type'
         required: true
-        default: 'model'
+        default: 'dataset'
         type: choice
         options:
-          - model
           - dataset
+          - model
 
 jobs:
   sync:
@@ -39,7 +41,7 @@ jobs:
       - name: Install Hugging Face Hub
         run: |
           pip install --upgrade pip
-          pip install huggingface_hub[cli]
+          pip install huggingface_hub
 
       - name: Login to Hugging Face
         run: |
@@ -51,5 +53,5 @@ jobs:
 
       - name: Upload to Hugging Face
         run: |
-          REPO_TYPE="${{ github.event.inputs.repo_type || 'model' }}"
+          REPO_TYPE="${{ github.event.inputs.repo_type || 'dataset' }}"
           python scripts/upload_to_hf.py --repo-id "$HF_REPO_ID" --repo-type "$REPO_TYPE" --folder .
